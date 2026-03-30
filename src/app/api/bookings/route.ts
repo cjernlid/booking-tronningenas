@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'En eller flera av datumen är blockerade' }, { status: 409 });
   }
 
-  const swish_reference = generateSwishReference();
+  const swish_reference = generateSwishReference(check_in, check_out);
 
   const { data, error } = await supabase
     .from('bookings')
