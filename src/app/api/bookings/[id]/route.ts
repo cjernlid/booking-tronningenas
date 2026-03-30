@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
+import { sendApprovalEmail, sendDenialEmail } from '@/lib/email';
 
 export async function PATCH(
   req: NextRequest,
@@ -22,6 +23,27 @@ export async function PATCH(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (data) {
+    if (status === 'approved') {
+      sendApprovalEmail({
+        guestName: data.guest_name,
+        guestEmail: data.guest_email,
+        checkIn: data.check_in,
+        checkOut: data.check_out,
+        nights: data.nights,
+        totalPrice: data.total_price,
+        swishReference: data.swish_reference,
+      }).catch(console.error);
+    } else if (status === 'denied') {
+      sendDenialEmail({
+        guestName: data.guest_name,
+        guestEmail: data.guest_email,
+        checkIn: data.check_in,
+        checkOut: data.check_out,
+      }).catch(console.error);
+    }
+  }
 
   return NextResponse.json(data);
 }
