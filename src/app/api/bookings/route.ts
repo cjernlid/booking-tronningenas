@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { generateSwishReference } from '@/lib/swish-ref';
+import { sendBookingNotification } from '@/lib/email';
 
 const PRICE_PER_NIGHT = 800;
 
@@ -80,7 +81,16 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // TODO: Send email notification to admins
+  // Send email notification to admins (fire and forget)
+  sendBookingNotification({
+    guestName: guest_name,
+    checkIn: check_in,
+    checkOut: check_out,
+    nights,
+    totalPrice: nights * PRICE_PER_NIGHT,
+    swishReference: swish_reference,
+    notes,
+  }).catch(() => {});
 
   return NextResponse.json(data, { status: 201 });
 }
