@@ -39,10 +39,8 @@ export default function AdminPage() {
     fetchData();
   };
 
-
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple PIN check - stored in env var
     if (pin === (process.env.NEXT_PUBLIC_ADMIN_PIN || '1234')) {
       setAuthed(true);
     } else {
@@ -85,7 +83,19 @@ export default function AdminPage() {
     ? bookings
     : bookings.filter(b => b.status === filter);
 
-  const pendingCount = bookings.filter(b => b.status === 'pending').length;
+  const counts = {
+    all: bookings.length,
+    pending: bookings.filter(b => b.status === 'pending').length,
+    approved: bookings.filter(b => b.status === 'approved').length,
+    denied: bookings.filter(b => b.status === 'denied').length,
+  };
+
+  const filterLabels: Record<string, string> = {
+    all: 'Alla',
+    pending: 'Inväntar',
+    approved: 'Godkända',
+    denied: 'Nekade',
+  };
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--color-sand)' }}>
@@ -97,9 +107,9 @@ export default function AdminPage() {
               Viekärrsvägen 4
             </h1>
           </div>
-          {pendingCount > 0 && (
+          {counts.pending > 0 && (
             <div className="px-4 py-2 rounded-full text-sm font-semibold" style={{ background: 'rgba(243,156,18,0.15)', color: 'var(--color-amber)' }}>
-              {pendingCount} inväntar
+              {counts.pending} inväntar
             </div>
           )}
         </div>
@@ -111,19 +121,33 @@ export default function AdminPage() {
           <OverviewCalendar bookings={bookings} blockedDates={blockedDates} />
         )}
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 mb-6">
+        {/* Section heading for bookings */}
+        <h2 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
+          Bokningar
+        </h2>
+
+        {/* Filter tabs with counts */}
+        <div className="flex gap-2 mb-6 flex-wrap">
           {(['all', 'pending', 'approved', 'denied'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className="px-4 py-2 rounded-full text-sm font-medium transition-all"
+              className="px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2"
               style={{
                 background: filter === f ? 'var(--color-copper)' : 'var(--color-white)',
                 color: filter === f ? 'var(--color-white)' : 'var(--color-forest-light)',
               }}
             >
-              {f === 'all' ? 'Alla' : f === 'pending' ? 'Inväntar' : f === 'approved' ? 'Godkända' : 'Nekade'}
+              {filterLabels[f]}
+              <span
+                className="text-xs font-bold rounded-full px-2 py-0.5 min-w-[22px] text-center"
+                style={{
+                  background: filter === f ? 'rgba(255,255,255,0.25)' : 'var(--color-sand)',
+                  color: filter === f ? 'var(--color-white)' : 'var(--color-forest-light)',
+                }}
+              >
+                {counts[f]}
+              </span>
             </button>
           ))}
         </div>
@@ -140,49 +164,49 @@ export default function AdminPage() {
             {filteredBookings.map(booking => (
               <div
                 key={booking.id}
-                className="rounded-2xl p-5"
+                className="rounded-2xl overflow-hidden"
                 style={{
                   background: 'var(--color-white)',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                   borderLeft: `4px solid ${booking.status === 'pending' ? 'var(--color-amber)' : booking.status === 'approved' ? 'var(--color-green)' : 'var(--color-red)'}`,
                 }}
               >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="font-semibold text-lg" style={{ color: 'var(--color-forest)' }}>
-                      {booking.guest_name}
-                    </p>
-                    {booking.guest_email && (
-                      <p className="text-sm" style={{ color: 'var(--color-forest-light)' }}>{booking.guest_email}</p>
-                    )}
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="font-semibold text-lg" style={{ color: 'var(--color-forest)' }}>
+                        {booking.guest_name}
+                      </p>
+                      {booking.guest_email && (
+                        <p className="text-sm" style={{ color: 'var(--color-forest-light)' }}>{booking.guest_email}</p>
+                      )}
+                    </div>
+                    <span
+                      className="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider"
+                      style={{
+                        background: booking.status === 'pending' ? 'rgba(243,156,18,0.15)' : booking.status === 'approved' ? 'rgba(76,175,80,0.1)' : 'rgba(231,76,60,0.1)',
+                        color: booking.status === 'pending' ? 'var(--color-amber)' : booking.status === 'approved' ? 'var(--color-green)' : 'var(--color-red)',
+                      }}
+                    >
+                      {booking.status === 'pending' ? 'Inväntar' : booking.status === 'approved' ? 'Godkänd' : 'Nekad'}
+                    </span>
                   </div>
-                  <span
-                    className="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider"
-                    style={{
-                      background: booking.status === 'pending' ? 'rgba(243,156,18,0.15)' : booking.status === 'approved' ? 'rgba(76,175,80,0.1)' : 'rgba(231,76,60,0.1)',
-                      color: booking.status === 'pending' ? 'var(--color-amber)' : booking.status === 'approved' ? 'var(--color-green)' : 'var(--color-red)',
-                    }}
-                  >
-                    {booking.status === 'pending' ? 'Inväntar' : booking.status === 'approved' ? 'Godkänd' : 'Nekad'}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-3 gap-4 mb-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-copper-dark)' }}>Incheckning</p>
-                    <p className="text-sm font-medium">{formatDate(booking.check_in)}</p>
+                  <div className="grid grid-cols-3 gap-4 mb-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-copper-dark)' }}>Incheckning</p>
+                      <p className="text-sm font-medium">{formatDate(booking.check_in)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-copper-dark)' }}>Utcheckning</p>
+                      <p className="text-sm font-medium">{formatDate(booking.check_out)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-copper-dark)' }}>Summa</p>
+                      <p className="text-sm font-medium">{booking.total_price.toLocaleString('sv-SE')} kr</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-copper-dark)' }}>Utcheckning</p>
-                    <p className="text-sm font-medium">{formatDate(booking.check_out)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-copper-dark)' }}>Summa</p>
-                    <p className="text-sm font-medium">{booking.total_price.toLocaleString('sv-SE')} kr</p>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs" style={{ color: 'var(--color-forest-light)' }}>
                       Swish-ref: <span className="font-mono font-semibold" style={{ color: 'var(--color-forest)' }}>{booking.swish_reference}</span>
@@ -193,26 +217,43 @@ export default function AdminPage() {
                       </p>
                     )}
                   </div>
-
-                  {booking.status === 'pending' && (
-                    <div className="flex gap-2 ml-4">
-                      <button
-                        onClick={() => handleStatusChange(booking.id, 'approved')}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                        style={{ background: 'var(--color-green)', color: 'white' }}
-                      >
-                        Godkänn
-                      </button>
-                      <button
-                        onClick={() => handleStatusChange(booking.id, 'denied')}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                        style={{ background: 'var(--color-red)', color: 'white' }}
-                      >
-                        Neka
-                      </button>
-                    </div>
-                  )}
                 </div>
+
+                {/* Action buttons - prominent, always visible for pending bookings */}
+                {booking.status === 'pending' && (
+                  <div
+                    className="flex border-t"
+                    style={{ borderColor: 'var(--color-sand)' }}
+                  >
+                    <button
+                      onClick={() => {
+                        if (confirm(`Godkänn bokning från ${booking.guest_name}?\n\n${formatDate(booking.check_in)} - ${formatDate(booking.check_out)}\n${booking.total_price.toLocaleString('sv-SE')} kr\n\nEtt bekräftelsemejl med Swish-info skickas till ${booking.guest_email || 'gästen'}.`)) {
+                          handleStatusChange(booking.id, 'approved');
+                        }
+                      }}
+                      className="flex-1 py-3.5 text-sm font-bold transition-all flex items-center justify-center gap-2"
+                      style={{ background: 'rgba(76,175,80,0.08)', color: 'var(--color-green)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(76,175,80,0.18)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(76,175,80,0.08)'; }}
+                    >
+                      <span style={{ fontSize: '16px' }}>&#10003;</span> Godkänn
+                    </button>
+                    <div style={{ width: '1px', background: 'var(--color-sand)' }} />
+                    <button
+                      onClick={() => {
+                        if (confirm(`Neka bokning från ${booking.guest_name}?\n\n${formatDate(booking.check_in)} - ${formatDate(booking.check_out)}\n\nEtt avslagsmejl skickas till ${booking.guest_email || 'gästen'}.`)) {
+                          handleStatusChange(booking.id, 'denied');
+                        }
+                      }}
+                      className="flex-1 py-3.5 text-sm font-bold transition-all flex items-center justify-center gap-2"
+                      style={{ background: 'rgba(231,76,60,0.06)', color: 'var(--color-red)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(231,76,60,0.15)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(231,76,60,0.06)'; }}
+                    >
+                      <span style={{ fontSize: '16px' }}>&#10005;</span> Neka
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -274,6 +315,7 @@ function OverviewCalendar({
 
       if (isPast) {
         textColor = 'var(--color-sand-dark)';
+        bgColor = 'transparent';
       } else if (info?.status === 'blocked') {
         bgColor = 'rgba(45,52,54,0.1)';
         textColor = 'var(--color-forest-light)';
@@ -287,7 +329,7 @@ function OverviewCalendar({
         textColor = 'var(--color-amber)';
         label = info.guest || '';
       } else if (!isPast) {
-        bgColor = 'rgba(76,175,80,0.06)';
+        bgColor = 'rgba(74,124,89,0.06)';
         textColor = 'var(--color-green)';
         label = 'Ledig';
       }
@@ -325,52 +367,58 @@ function OverviewCalendar({
   const monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
 
   return (
-    <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-          className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ color: 'var(--color-forest-light)' }}
-          type="button"
-        >
-          &larr;
-        </button>
-        <h2 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
-          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-        </h2>
-        <button
-          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-          className="w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ color: 'var(--color-forest-light)' }}
-          type="button"
-        >
-          &rarr;
-        </button>
-      </div>
+    <div className="mb-8">
+      <h2 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
+        Översikt
+      </h2>
+      <div className="rounded-2xl p-6" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ color: 'var(--color-forest-light)' }}
+            type="button"
+          >
+            &larr;
+          </button>
+          <h3 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
+            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h3>
+          <button
+            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ color: 'var(--color-forest-light)' }}
+            type="button"
+          >
+            &rarr;
+          </button>
+        </div>
 
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
-          <div key={day} className="text-center text-xs font-medium py-1" style={{ color: 'var(--color-forest-light)' }}>
-            {day}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
+            <div key={day} className="text-center text-xs font-medium py-1" style={{ color: 'var(--color-forest-light)' }}>
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {renderCalendar()}
+        </div>
+
+        {/* Legend + note that this is view-only */}
+        <div className="flex flex-wrap gap-4 mt-5 pt-4" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+            <div className="w-3 h-3 rounded" style={{ background: 'rgba(74,124,89,0.12)' }} /> Ledig
           </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {renderCalendar()}
-      </div>
-
-      <div className="flex flex-wrap gap-4 mt-5 pt-4" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-          <div className="w-3 h-3 rounded" style={{ background: 'rgba(76,175,80,0.15)' }} /> Ledig
-        </div>
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-          <div className="w-3 h-3 rounded" style={{ background: 'rgba(231,76,60,0.15)' }} /> Godkänd
-        </div>
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-          <div className="w-3 h-3 rounded" style={{ background: 'rgba(243,156,18,0.15)' }} /> Inväntar
-        </div>
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-          <div className="w-3 h-3 rounded" style={{ background: 'rgba(45,52,54,0.1)' }} /> Blockerad
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+            <div className="w-3 h-3 rounded" style={{ background: 'rgba(231,76,60,0.15)' }} /> Godkänd
+          </div>
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+            <div className="w-3 h-3 rounded" style={{ background: 'rgba(243,156,18,0.15)' }} /> Inväntar
+          </div>
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+            <div className="w-3 h-3 rounded" style={{ background: 'rgba(45,52,54,0.1)' }} /> Blockerad
+          </div>
         </div>
       </div>
     </div>
@@ -412,15 +460,23 @@ function BlockDatesCalendar({
 
   const handleBlock = async () => {
     if (selectedDates.size === 0) return;
-    setSaving(true);
     const datesToBlock = [...selectedDates].filter(d => !blockedSet.has(d));
-    if (datesToBlock.length > 0) {
-      await fetch('/api/blocked-dates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dates: datesToBlock, reason: blockReason }),
-      });
-    }
+    if (datesToBlock.length === 0) return;
+
+    const sortedDates = datesToBlock.sort();
+    const confirmMsg = `Blockera ${datesToBlock.length} datum?\n\n${sortedDates.map(d => {
+      const date = new Date(d + 'T12:00:00');
+      return date.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+    }).join('\n')}\n\nDessa datum kommer inte gå att boka.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    setSaving(true);
+    await fetch('/api/blocked-dates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dates: datesToBlock, reason: blockReason }),
+    });
     setSelectedDates(new Set());
     setBlockReason('');
     setSaving(false);
@@ -429,8 +485,18 @@ function BlockDatesCalendar({
 
   const handleUnblock = async () => {
     if (selectedDates.size === 0) return;
-    setSaving(true);
     const datesToUnblock = [...selectedDates].filter(d => blockedSet.has(d));
+    if (datesToUnblock.length === 0) return;
+
+    const sortedDates = datesToUnblock.sort();
+    const confirmMsg = `Avblockera ${datesToUnblock.length} datum?\n\n${sortedDates.map(d => {
+      const date = new Date(d + 'T12:00:00');
+      return date.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+    }).join('\n')}\n\nDessa datum blir bokningsbara igen.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    setSaving(true);
     for (const date of datesToUnblock) {
       await fetch(`/api/blocked-dates?date=${date}`, { method: 'DELETE' });
     }
@@ -465,9 +531,9 @@ function BlockDatesCalendar({
       let className = 'h-10 w-full rounded-lg text-sm font-medium transition-all duration-200 relative ';
 
       if (isPast) {
-        className += 'text-[var(--color-sand-dark)] cursor-default';
+        className += 'text-[var(--color-sand-dark)] cursor-default opacity-40';
       } else if (isBookedDate) {
-        className += 'bg-[var(--color-red)]/15 text-[var(--color-red)] cursor-not-allowed';
+        className += 'bg-[var(--color-red)]/15 text-[var(--color-red)]/70 cursor-not-allowed';
       } else if (isSelected && isBlocked) {
         className += 'bg-[var(--color-forest)] text-white cursor-pointer ring-2 ring-[var(--color-copper)]';
       } else if (isSelected) {
@@ -484,7 +550,7 @@ function BlockDatesCalendar({
           onClick={() => !isPast && !isBookedDate && toggleDate(dateStr)}
           className={className}
           type="button"
-          title={isBlocked ? 'Blockerad' : isBookedDate ? 'Bokad' : ''}
+          title={isBlocked ? 'Blockerad (klicka för att markera)' : isBookedDate ? 'Bokad (kan ej blockeras)' : isPast ? 'Passerat' : 'Klicka för att markera'}
         >
           {d}
           {isBlocked && !isSelected && (
@@ -501,9 +567,12 @@ function BlockDatesCalendar({
 
   return (
     <div className="mt-10">
-      <h2 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
-        Blockera datum
+      <h2 className="text-xl mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
+        Hantera blockering
       </h2>
+      <p className="text-sm mb-4" style={{ color: 'var(--color-forest-light)' }}>
+        Markera datum i kalendern, sedan klicka &quot;Blockera&quot; eller &quot;Avblockera&quot; nedan.
+      </p>
 
       <div className="rounded-2xl p-6 mb-4" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
         {/* Calendar nav */}
@@ -556,23 +625,23 @@ function BlockDatesCalendar({
           </div>
         </div>
 
-        {/* Action bar */}
+        {/* Action bar - visible when dates are selected */}
         {selectedDates.size > 0 && (
           <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
-            <p className="text-sm mb-3" style={{ color: 'var(--color-forest)' }}>
-              {selectedDates.size} {selectedDates.size === 1 ? 'datum valt' : 'datum valda'}
-              {selectedNewCount > 0 && <span style={{ color: 'var(--color-forest-light)' }}> ({selectedNewCount} nya)</span>}
-              {selectedBlockedCount > 0 && <span style={{ color: 'var(--color-forest-light)' }}> ({selectedBlockedCount} redan blockerade)</span>}
+            <p className="text-sm mb-3 font-medium" style={{ color: 'var(--color-forest)' }}>
+              {selectedDates.size} {selectedDates.size === 1 ? 'datum markerat' : 'datum markerade'}
+              {selectedNewCount > 0 && <span style={{ color: 'var(--color-forest-light)', fontWeight: 400 }}> ({selectedNewCount} lediga)</span>}
+              {selectedBlockedCount > 0 && <span style={{ color: 'var(--color-forest-light)', fontWeight: 400 }}> ({selectedBlockedCount} blockerade)</span>}
             </p>
 
             {selectedNewCount > 0 && (
-              <div className="flex gap-3 mb-3">
+              <div className="mb-3">
                 <input
                   type="text"
                   value={blockReason}
                   onChange={e => setBlockReason(e.target.value)}
                   placeholder="Anledning (valfritt)"
-                  className="flex-1 px-4 py-3 rounded-xl text-sm outline-none"
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none"
                   style={{ background: 'var(--color-sand)', border: '1px solid var(--color-sand-dark)', color: 'var(--color-forest)' }}
                 />
               </div>
@@ -583,7 +652,7 @@ function BlockDatesCalendar({
                 <button
                   onClick={handleBlock}
                   disabled={saving}
-                  className="px-5 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  className="px-5 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
                   style={{ background: 'var(--color-forest)', color: 'white' }}
                 >
                   {saving ? 'Sparar...' : `Blockera ${selectedNewCount} datum`}
@@ -593,7 +662,7 @@ function BlockDatesCalendar({
                 <button
                   onClick={handleUnblock}
                   disabled={saving}
-                  className="px-5 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+                  className="px-5 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
                   style={{ background: 'var(--color-red)', color: 'white' }}
                 >
                   {saving ? 'Sparar...' : `Avblockera ${selectedBlockedCount} datum`}
@@ -608,6 +677,13 @@ function BlockDatesCalendar({
               </button>
             </div>
           </div>
+        )}
+
+        {/* Empty state hint when nothing selected */}
+        {selectedDates.size === 0 && (
+          <p className="text-center text-xs mt-4" style={{ color: 'var(--color-forest-light)' }}>
+            Klicka pa datum ovan for att markera dem, sedan anvand knapparna for att blockera eller avblockera.
+          </p>
         )}
       </div>
     </div>

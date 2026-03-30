@@ -22,6 +22,8 @@ export default function BookingPage() {
   const [bookedRanges, setBookedRanges] = useState<BookedRange[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  const datesSelected = checkIn && checkOut;
+
   const fetchUnavailable = useCallback(async () => {
     try {
       const [blockedRes, bookingsRes] = await Promise.all([
@@ -105,7 +107,6 @@ export default function BookingPage() {
 
     const days: React.ReactNode[] = [];
 
-    // Empty cells for padding
     for (let i = 0; i < startPad; i++) {
       days.push(<div key={`pad-${i}`} className="h-10" />);
     }
@@ -118,23 +119,25 @@ export default function BookingPage() {
       const isPast = dateStr < today;
       const isSelected = dateStr === checkIn || dateStr === checkOut;
       const isInRange = checkIn && checkOut && dateStr > checkIn && dateStr < checkOut;
+      const isAvailable = !isPast && !status;
 
       let className = 'h-10 w-full rounded-lg text-sm font-medium transition-all duration-200 ';
 
       if (isPast) {
-        className += 'text-[var(--color-sand-dark)] cursor-default';
+        className += 'text-[var(--color-sand-dark)]/50 cursor-default opacity-40';
       } else if (status === 'blocked') {
-        className += 'bg-[var(--color-forest)]/10 text-[var(--color-forest-light)] cursor-not-allowed line-through';
+        className += 'bg-[var(--color-forest)]/8 text-[var(--color-forest-light)]/50 cursor-not-allowed line-through opacity-50';
       } else if (status === 'approved') {
-        className += 'bg-[var(--color-red)]/15 text-[var(--color-red)] cursor-not-allowed';
+        className += 'bg-[var(--color-red)]/12 text-[var(--color-red)]/70 cursor-not-allowed';
       } else if (status === 'pending') {
-        className += 'bg-[var(--color-amber)]/15 text-[var(--color-amber)] cursor-not-allowed';
+        className += 'bg-[var(--color-amber)]/12 text-[var(--color-amber)]/70 cursor-not-allowed';
       } else if (isSelected) {
-        className += 'bg-[var(--color-copper)] text-white cursor-pointer';
+        className += 'bg-[var(--color-copper)] text-white cursor-pointer shadow-sm';
       } else if (isInRange) {
-        className += 'bg-[var(--color-copper)]/20 text-[var(--color-forest)] cursor-pointer';
+        className += 'bg-[var(--color-copper)]/15 text-[var(--color-forest)] cursor-pointer';
       } else {
-        className += 'hover:bg-[var(--color-copper)]/10 text-[var(--color-forest)] cursor-pointer';
+        // Available dates - subtle green tint to signal clickability
+        className += 'bg-[#4A7C59]/5 hover:bg-[var(--color-copper)]/15 text-[var(--color-forest)] cursor-pointer hover:shadow-sm';
       }
 
       const handleClick = () => {
@@ -144,7 +147,6 @@ export default function BookingPage() {
           setCheckOut('');
         } else {
           if (dateStr > checkIn) {
-            // Check if any dates in range are unavailable
             const start = new Date(checkIn);
             const end = new Date(dateStr);
             let hasConflict = false;
@@ -169,7 +171,13 @@ export default function BookingPage() {
       };
 
       days.push(
-        <button key={dateStr} onClick={handleClick} className={className} type="button">
+        <button
+          key={dateStr}
+          onClick={handleClick}
+          className={className}
+          type="button"
+          title={isPast ? 'Passerat' : status === 'blocked' ? 'Blockerad' : status === 'approved' ? 'Bokad' : status === 'pending' ? 'Inväntar svar' : 'Ledig'}
+        >
           {d}
         </button>
       );
@@ -194,163 +202,220 @@ export default function BookingPage() {
       </header>
 
       <main className="max-w-lg mx-auto px-6 pb-16">
-        {/* Calendar */}
-        <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-              style={{ color: 'var(--color-forest-light)' }}
-              type="button"
-            >
-              &larr;
-            </button>
-            <h2 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </h2>
-            <button
-              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-              style={{ color: 'var(--color-forest-light)' }}
-              type="button"
-            >
-              &rarr;
-            </button>
-          </div>
 
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
-              <div key={day} className="text-center text-xs font-medium py-1" style={{ color: 'var(--color-forest-light)' }}>
-                {day}
-              </div>
-            ))}
+        {/* Step indicator */}
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+              style={{
+                background: !datesSelected ? 'var(--color-copper)' : 'var(--color-forest)',
+                color: 'white',
+              }}
+            >
+              {datesSelected ? '✓' : '1'}
+            </div>
+            <span className="text-sm font-medium" style={{ color: !datesSelected ? 'var(--color-forest)' : 'var(--color-forest-light)' }}>
+              Välj datum
+            </span>
           </div>
-          <div className="grid grid-cols-7 gap-1">
-            {renderCalendar()}
-          </div>
-
-          {/* Legend */}
-          <div className="flex flex-wrap gap-4 mt-5 pt-4" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-              <div className="w-3 h-3 rounded" style={{ background: 'rgba(231,76,60,0.15)' }} /> Bokad
+          <div className="w-8 h-px" style={{ background: 'var(--color-sand-dark)' }} />
+          <div className="flex items-center gap-2">
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+              style={{
+                background: datesSelected ? 'var(--color-copper)' : 'var(--color-sand-dark)',
+                color: datesSelected ? 'white' : 'var(--color-sand)',
+              }}
+            >
+              2
             </div>
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-              <div className="w-3 h-3 rounded" style={{ background: 'rgba(243,156,18,0.15)' }} /> Inväntar svar
-            </div>
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-              <div className="w-3 h-3 rounded" style={{ background: 'rgba(45,52,54,0.1)' }} /> Blockerad
-            </div>
+            <span className="text-sm font-medium" style={{ color: datesSelected ? 'var(--color-forest)' : 'var(--color-sand-dark)' }}>
+              Fyll i uppgifter
+            </span>
           </div>
         </div>
 
-        {/* Selected dates summary */}
-        {checkIn && (
-          <div className="rounded-2xl p-5 mb-6" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--color-copper-dark)' }}>Incheckning</p>
-                <p className="font-medium" style={{ color: 'var(--color-forest)' }}>{formatDate(checkIn)}</p>
-              </div>
-              {checkOut && (
-                <>
-                  <div className="text-xl" style={{ color: 'var(--color-sand-dark)' }}>&rarr;</div>
-                  <div className="text-right">
-                    <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--color-copper-dark)' }}>Utcheckning</p>
-                    <p className="font-medium" style={{ color: 'var(--color-forest)' }}>{formatDate(checkOut)}</p>
-                  </div>
-                </>
-              )}
+        {/* Single unified card */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+
+          {/* Calendar section */}
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+                style={{ color: 'var(--color-forest-light)' }}
+                type="button"
+              >
+                &larr;
+              </button>
+              <h2 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
+                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+              </h2>
+              <button
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+                style={{ color: 'var(--color-forest-light)' }}
+                type="button"
+              >
+                &rarr;
+              </button>
             </div>
-            {nights > 0 && (
-              <div className="mt-4 pt-4 flex justify-between" style={{ borderTop: '1px solid var(--color-sand)' }}>
-                <span style={{ color: 'var(--color-forest-light)' }}>{nights} {nights === 1 ? 'natt' : 'nätter'} x {PRICE_PER_NIGHT} kr</span>
-                <span className="font-semibold" style={{ color: 'var(--color-forest)' }}>{(nights * PRICE_PER_NIGHT).toLocaleString('sv-SE')} kr</span>
+
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
+                <div key={day} className="text-center text-xs font-medium py-1" style={{ color: 'var(--color-forest-light)' }}>
+                  {day}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {renderCalendar()}
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 mt-5 pt-4" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+                <div className="w-3 h-3 rounded" style={{ background: 'rgba(74,124,89,0.12)' }} /> Ledig
               </div>
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+                <div className="w-3 h-3 rounded" style={{ background: 'rgba(231,76,60,0.15)' }} /> Bokad
+              </div>
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+                <div className="w-3 h-3 rounded" style={{ background: 'rgba(243,156,18,0.15)' }} /> Inväntar svar
+              </div>
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+                <div className="w-3 h-3 rounded" style={{ background: 'rgba(45,52,54,0.08)', textDecoration: 'line-through' }} /> Blockerad
+              </div>
+            </div>
+
+            {/* Help text when no dates selected */}
+            {!checkIn && (
+              <p className="text-center text-xs mt-4" style={{ color: 'var(--color-forest-light)' }}>
+                Tryck på ett datum för att välja incheckning
+              </p>
+            )}
+            {checkIn && !checkOut && (
+              <p className="text-center text-xs mt-4" style={{ color: 'var(--color-copper-dark)' }}>
+                Bra! Välj nu utcheckningsdatum
+              </p>
             )}
           </div>
-        )}
 
-        {/* Booking form */}
-        <form onSubmit={handleSubmit} className="rounded-2xl p-6" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          <h3 className="text-lg mb-5" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
-            Boka stugan
-          </h3>
+          {/* Date confirmation + form section */}
+          {checkIn && (
+            <div className="px-6 pb-6">
+              {/* Divider */}
+              <div className="h-px mb-6" style={{ background: 'var(--color-sand)' }} />
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs uppercase tracking-wider mb-1.5" style={{ color: 'var(--color-forest-light)' }}>
-                Namn *
-              </label>
-              <input
-                type="text"
-                value={guestName}
-                onChange={e => setGuestName(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                style={{
-                  background: 'var(--color-sand)',
-                  border: '1px solid var(--color-sand-dark)',
-                  color: 'var(--color-forest)',
-                }}
-                onFocus={e => e.target.style.borderColor = 'var(--color-copper)'}
-                onBlur={e => e.target.style.borderColor = 'var(--color-sand-dark)'}
-                placeholder="Ditt namn"
-              />
+              {/* Selected dates summary */}
+              <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--color-sand)', border: '1px solid var(--color-sand-dark)' }}>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--color-copper-dark)' }}>Incheckning</p>
+                    <p className="font-medium text-sm" style={{ color: 'var(--color-forest)' }}>{formatDate(checkIn)}</p>
+                  </div>
+                  {checkOut && (
+                    <>
+                      <div className="text-lg" style={{ color: 'var(--color-sand-dark)' }}>&rarr;</div>
+                      <div className="text-right">
+                        <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--color-copper-dark)' }}>Utcheckning</p>
+                        <p className="font-medium text-sm" style={{ color: 'var(--color-forest)' }}>{formatDate(checkOut)}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {nights > 0 && (
+                  <div className="mt-3 pt-3 flex justify-between text-sm" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
+                    <span style={{ color: 'var(--color-forest-light)' }}>{nights} {nights === 1 ? 'natt' : 'nätter'} x {PRICE_PER_NIGHT} kr</span>
+                    <span className="font-semibold" style={{ color: 'var(--color-forest)' }}>{(nights * PRICE_PER_NIGHT).toLocaleString('sv-SE')} kr</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Form fields - only show when both dates are selected */}
+              {checkOut && (
+                <form onSubmit={handleSubmit}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider mb-1.5" style={{ color: 'var(--color-forest-light)' }}>
+                        Namn *
+                      </label>
+                      <input
+                        type="text"
+                        value={guestName}
+                        onChange={e => setGuestName(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                        style={{
+                          background: 'var(--color-sand)',
+                          border: '1px solid var(--color-sand-dark)',
+                          color: 'var(--color-forest)',
+                        }}
+                        onFocus={e => e.target.style.borderColor = 'var(--color-copper)'}
+                        onBlur={e => e.target.style.borderColor = 'var(--color-sand-dark)'}
+                        placeholder="Ditt namn"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider mb-1.5" style={{ color: 'var(--color-forest-light)' }}>
+                        E-post
+                      </label>
+                      <input
+                        type="email"
+                        value={guestEmail}
+                        onChange={e => setGuestEmail(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                        style={{
+                          background: 'var(--color-sand)',
+                          border: '1px solid var(--color-sand-dark)',
+                          color: 'var(--color-forest)',
+                        }}
+                        onFocus={e => e.target.style.borderColor = 'var(--color-copper)'}
+                        onBlur={e => e.target.style.borderColor = 'var(--color-sand-dark)'}
+                        placeholder="För bekräftelse (valfritt)"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider mb-1.5" style={{ color: 'var(--color-forest-light)' }}>
+                        Meddelande
+                      </label>
+                      <textarea
+                        value={notes}
+                        onChange={e => setNotes(e.target.value)}
+                        rows={2}
+                        className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
+                        style={{
+                          background: 'var(--color-sand)',
+                          border: '1px solid var(--color-sand-dark)',
+                          color: 'var(--color-forest)',
+                        }}
+                        onFocus={e => e.target.style.borderColor = 'var(--color-copper)'}
+                        onBlur={e => e.target.style.borderColor = 'var(--color-sand-dark)'}
+                        placeholder="Något du vill meddela (valfritt)"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={!guestName || nights < 1 || loading}
+                    className="w-full mt-6 py-3.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: 'var(--color-copper)',
+                      color: 'var(--color-white)',
+                    }}
+                  >
+                    {loading ? 'Skickar...' : `Skicka bokningsförfrågan (${(nights * PRICE_PER_NIGHT).toLocaleString('sv-SE')} kr)`}
+                  </button>
+                </form>
+              )}
             </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-wider mb-1.5" style={{ color: 'var(--color-forest-light)' }}>
-                E-post
-              </label>
-              <input
-                type="email"
-                value={guestEmail}
-                onChange={e => setGuestEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                style={{
-                  background: 'var(--color-sand)',
-                  border: '1px solid var(--color-sand-dark)',
-                  color: 'var(--color-forest)',
-                }}
-                onFocus={e => e.target.style.borderColor = 'var(--color-copper)'}
-                onBlur={e => e.target.style.borderColor = 'var(--color-sand-dark)'}
-                placeholder="För bekräftelse (valfritt)"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-wider mb-1.5" style={{ color: 'var(--color-forest-light)' }}>
-                Meddelande
-              </label>
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                rows={2}
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
-                style={{
-                  background: 'var(--color-sand)',
-                  border: '1px solid var(--color-sand-dark)',
-                  color: 'var(--color-forest)',
-                }}
-                onFocus={e => e.target.style.borderColor = 'var(--color-copper)'}
-                onBlur={e => e.target.style.borderColor = 'var(--color-sand-dark)'}
-                placeholder="Något du vill meddela (valfritt)"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={!guestName || !checkIn || !checkOut || nights < 1 || loading}
-            className="w-full mt-6 py-3.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              background: 'var(--color-copper)',
-              color: 'var(--color-white)',
-            }}
-          >
-            {loading ? 'Skickar...' : nights > 0 ? `Skicka bokningsförfrågan (${(nights * PRICE_PER_NIGHT).toLocaleString('sv-SE')} kr)` : 'Välj datum i kalendern'}
-          </button>
-        </form>
+          )}
+        </div>
 
         {/* Result */}
         {result && (
@@ -387,5 +452,5 @@ export default function BookingPage() {
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
