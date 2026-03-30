@@ -116,9 +116,9 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 pb-16">
-        {/* Overview calendar */}
+        {/* Unified calendar */}
         {!loading && (
-          <OverviewCalendar bookings={bookings} blockedDates={blockedDates} />
+          <UnifiedCalendar bookings={bookings} blockedDates={blockedDates} onUpdate={fetchData} />
         )}
 
         {/* Section heading for bookings */}
@@ -219,7 +219,6 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Action buttons - prominent, always visible for pending bookings */}
                 {booking.status === 'pending' && (
                   <div
                     className="flex border-t"
@@ -258,180 +257,18 @@ export default function AdminPage() {
             ))}
           </div>
         )}
-
-        {/* Block dates section with calendar */}
-        <BlockDatesCalendar
-          blockedDates={blockedDates}
-          bookings={bookings}
-          onUpdate={fetchData}
-        />
       </main>
     </div>
   );
 }
 
-function OverviewCalendar({
+function UnifiedCalendar({
   bookings,
   blockedDates,
-}: {
-  bookings: Booking[];
-  blockedDates: BlockedDate[];
-}) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const blockedSet = new Set(blockedDates.map(bd => bd.date));
-
-  const getDateInfo = (dateStr: string): { status: string; guest?: string } | null => {
-    if (blockedSet.has(dateStr)) return { status: 'blocked' };
-    for (const b of bookings) {
-      if (b.status !== 'denied' && dateStr >= b.check_in && dateStr < b.check_out) {
-        return { status: b.status, guest: b.guest_name };
-      }
-    }
-    return null;
-  };
-
-  const renderCalendar = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startPad = (firstDay.getDay() + 6) % 7;
-    const today = new Date().toISOString().split('T')[0];
-
-    const days: React.ReactNode[] = [];
-    for (let i = 0; i < startPad; i++) {
-      days.push(<div key={`pad-${i}`} className="h-14" />);
-    }
-
-    for (let d = 1; d <= lastDay.getDate(); d++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const isPast = dateStr < today;
-      const isToday = dateStr === today;
-      const info = getDateInfo(dateStr);
-
-      let bgColor = 'transparent';
-      let textColor = 'var(--color-forest)';
-      let label = '';
-
-      if (isPast) {
-        textColor = 'var(--color-sand-dark)';
-        bgColor = 'transparent';
-      } else if (info?.status === 'blocked') {
-        bgColor = 'rgba(45,52,54,0.1)';
-        textColor = 'var(--color-forest-light)';
-        label = 'Blockerad';
-      } else if (info?.status === 'approved') {
-        bgColor = 'rgba(231,76,60,0.12)';
-        textColor = 'var(--color-red)';
-        label = info.guest || '';
-      } else if (info?.status === 'pending') {
-        bgColor = 'rgba(243,156,18,0.12)';
-        textColor = 'var(--color-amber)';
-        label = info.guest || '';
-      } else if (!isPast) {
-        bgColor = 'rgba(74,124,89,0.06)';
-        textColor = 'var(--color-green)';
-        label = 'Ledig';
-      }
-
-      days.push(
-        <div
-          key={dateStr}
-          className="h-14 rounded-lg flex flex-col items-center justify-center relative"
-          style={{ background: bgColor }}
-        >
-          <span
-            className="text-sm font-medium"
-            style={{
-              color: textColor,
-              ...(isToday ? { textDecoration: 'underline', textUnderlineOffset: '2px' } : {}),
-            }}
-          >
-            {d}
-          </span>
-          {label && !isPast && (
-            <span
-              className="text-[9px] leading-tight truncate max-w-full px-0.5"
-              style={{ color: textColor, opacity: 0.8 }}
-            >
-              {label}
-            </span>
-          )}
-        </div>
-      );
-    }
-
-    return days;
-  };
-
-  const monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
-
-  return (
-    <div className="mb-8">
-      <h2 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
-        Översikt
-      </h2>
-      <div className="rounded-2xl p-6" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-            className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ color: 'var(--color-forest-light)' }}
-            type="button"
-          >
-            &larr;
-          </button>
-          <h3 className="text-lg font-medium" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
-            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-          </h3>
-          <button
-            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-            className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ color: 'var(--color-forest-light)' }}
-            type="button"
-          >
-            &rarr;
-          </button>
-        </div>
-
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
-            <div key={day} className="text-center text-xs font-medium py-1" style={{ color: 'var(--color-forest-light)' }}>
-              {day}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {renderCalendar()}
-        </div>
-
-        {/* Legend + note that this is view-only */}
-        <div className="flex flex-wrap gap-4 mt-5 pt-4" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-            <div className="w-3 h-3 rounded" style={{ background: 'rgba(74,124,89,0.12)' }} /> Ledig
-          </div>
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-            <div className="w-3 h-3 rounded" style={{ background: 'rgba(231,76,60,0.15)' }} /> Godkänd
-          </div>
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-            <div className="w-3 h-3 rounded" style={{ background: 'rgba(243,156,18,0.15)' }} /> Inväntar
-          </div>
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-            <div className="w-3 h-3 rounded" style={{ background: 'rgba(45,52,54,0.1)' }} /> Blockerad
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BlockDatesCalendar({
-  blockedDates,
-  bookings,
   onUpdate,
 }: {
-  blockedDates: BlockedDate[];
   bookings: Booking[];
+  blockedDates: BlockedDate[];
   onUpdate: () => void;
 }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -440,6 +277,15 @@ function BlockDatesCalendar({
   const [saving, setSaving] = useState(false);
 
   const blockedSet = new Set(blockedDates.map(bd => bd.date));
+
+  const getBookingInfo = (dateStr: string): { status: string; guest?: string } | null => {
+    for (const b of bookings) {
+      if (b.status !== 'denied' && dateStr >= b.check_in && dateStr < b.check_out) {
+        return { status: b.status, guest: b.guest_name };
+      }
+    }
+    return null;
+  };
 
   const isBooked = (dateStr: string) => {
     return bookings.some(
@@ -467,7 +313,7 @@ function BlockDatesCalendar({
     const confirmMsg = `Blockera ${datesToBlock.length} datum?\n\n${sortedDates.map(d => {
       const date = new Date(d + 'T12:00:00');
       return date.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
-    }).join('\n')}\n\nDessa datum kommer inte gå att boka.`;
+    }).join('\n')}\n\nDessa datum kommer inte att gå att boka.`;
 
     if (!confirm(confirmMsg)) return;
 
@@ -518,43 +364,90 @@ function BlockDatesCalendar({
 
     const days: React.ReactNode[] = [];
     for (let i = 0; i < startPad; i++) {
-      days.push(<div key={`pad-${i}`} className="h-10" />);
+      days.push(<div key={`pad-${i}`} className="h-14" />);
     }
 
     for (let d = 1; d <= lastDay.getDate(); d++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const isPast = dateStr < today;
+      const isToday = dateStr === today;
       const isBlocked = blockedSet.has(dateStr);
-      const isBookedDate = isBooked(dateStr);
+      const bookingInfo = getBookingInfo(dateStr);
+      const isBookedDate = !!bookingInfo;
       const isSelected = selectedDates.has(dateStr);
 
-      let className = 'h-10 w-full rounded-lg text-sm font-medium transition-all duration-200 relative ';
+      let bgColor = 'transparent';
+      let textColor = 'var(--color-forest)';
+      let label = '';
+      let cursor = 'pointer';
 
       if (isPast) {
-        className += 'text-[var(--color-sand-dark)] cursor-default opacity-40';
-      } else if (isBookedDate) {
-        className += 'bg-[var(--color-red)]/15 text-[var(--color-red)]/70 cursor-not-allowed';
+        textColor = 'var(--color-sand-dark)';
+        cursor = 'default';
       } else if (isSelected && isBlocked) {
-        className += 'bg-[var(--color-forest)] text-white cursor-pointer ring-2 ring-[var(--color-copper)]';
+        bgColor = 'var(--color-forest)';
+        textColor = 'white';
+        label = 'Blockerad';
+        cursor = 'pointer';
       } else if (isSelected) {
-        className += 'bg-[var(--color-copper)] text-white cursor-pointer ring-2 ring-[var(--color-copper-dark)]';
+        bgColor = 'var(--color-copper)';
+        textColor = 'white';
+        label = 'Markerad';
+        cursor = 'pointer';
+      } else if (bookingInfo?.status === 'approved') {
+        bgColor = 'rgba(231,76,60,0.12)';
+        textColor = 'var(--color-red)';
+        label = bookingInfo.guest || '';
+        cursor = 'not-allowed';
+      } else if (bookingInfo?.status === 'pending') {
+        bgColor = 'rgba(243,156,18,0.12)';
+        textColor = 'var(--color-amber)';
+        label = bookingInfo.guest || '';
+        cursor = 'not-allowed';
       } else if (isBlocked) {
-        className += 'bg-[var(--color-forest)]/15 text-[var(--color-forest)] cursor-pointer';
-      } else {
-        className += 'hover:bg-[var(--color-copper)]/10 text-[var(--color-forest)] cursor-pointer';
+        bgColor = 'rgba(45,52,54,0.1)';
+        textColor = 'var(--color-forest-light)';
+        label = 'Blockerad';
+      } else if (!isPast) {
+        bgColor = 'rgba(74,124,89,0.06)';
+        textColor = 'var(--color-green)';
+        label = 'Ledig';
       }
+
+      const handleClick = () => {
+        if (isPast || isBookedDate) return;
+        toggleDate(dateStr);
+      };
 
       days.push(
         <button
           key={dateStr}
-          onClick={() => !isPast && !isBookedDate && toggleDate(dateStr)}
-          className={className}
+          onClick={handleClick}
+          className="h-14 w-full rounded-lg flex flex-col items-center justify-center relative transition-all duration-150"
+          style={{
+            background: bgColor,
+            cursor,
+            ...(isSelected ? { boxShadow: '0 0 0 2px var(--color-copper)' } : {}),
+          }}
           type="button"
-          title={isBlocked ? 'Blockerad (klicka för att markera)' : isBookedDate ? 'Bokad (kan ej blockeras)' : isPast ? 'Passerat' : 'Klicka för att markera'}
+          title={isPast ? 'Passerat' : isBookedDate ? `Bokad: ${bookingInfo?.guest}` : isBlocked ? 'Blockerad (klicka for att markera)' : 'Ledig (klicka for att markera)'}
         >
-          {d}
-          {isBlocked && !isSelected && (
-            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: 'var(--color-forest)' }} />
+          <span
+            className="text-sm font-medium"
+            style={{
+              color: textColor,
+              ...(isToday ? { textDecoration: 'underline', textUnderlineOffset: '2px' } : {}),
+            }}
+          >
+            {d}
+          </span>
+          {label && !isPast && (
+            <span
+              className="text-[9px] leading-tight truncate max-w-full px-0.5"
+              style={{ color: textColor, opacity: isSelected ? 1 : 0.8 }}
+            >
+              {label}
+            </span>
           )}
         </button>
       );
@@ -566,16 +459,12 @@ function BlockDatesCalendar({
   const monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
 
   return (
-    <div className="mt-10">
-      <h2 className="text-xl mb-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
-        Hantera blockering
+    <div className="mb-8">
+      <h2 className="text-xl mb-4" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
+        Kalender
       </h2>
-      <p className="text-sm mb-4" style={{ color: 'var(--color-forest-light)' }}>
-        Markera datum i kalendern, sedan klicka &quot;Blockera&quot; eller &quot;Avblockera&quot; nedan.
-      </p>
-
-      <div className="rounded-2xl p-6 mb-4" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-        {/* Calendar nav */}
+      <div className="rounded-2xl p-6" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        {/* Month nav */}
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
@@ -615,17 +504,23 @@ function BlockDatesCalendar({
         {/* Legend */}
         <div className="flex flex-wrap gap-4 mt-5 pt-4" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
           <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-            <div className="w-3 h-3 rounded" style={{ background: 'rgba(45,52,54,0.15)' }} /> Blockerad
+            <div className="w-3 h-3 rounded" style={{ background: 'rgba(74,124,89,0.12)' }} /> Ledig
           </div>
           <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-            <div className="w-3 h-3 rounded" style={{ background: 'rgba(231,76,60,0.15)' }} /> Bokad
+            <div className="w-3 h-3 rounded" style={{ background: 'rgba(231,76,60,0.15)' }} /> Godkänd
           </div>
           <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
-            <div className="w-3 h-3 rounded" style={{ background: 'var(--color-copper)' }} /> Markerad
+            <div className="w-3 h-3 rounded" style={{ background: 'rgba(243,156,18,0.15)' }} /> Inväntar
+          </div>
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+            <div className="w-3 h-3 rounded" style={{ background: 'rgba(45,52,54,0.1)' }} /> Blockerad
+          </div>
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-forest-light)' }}>
+            <div className="w-3 h-3 rounded" style={{ background: 'var(--color-copper)', boxShadow: '0 0 0 2px var(--color-copper)' }} /> Markerad
           </div>
         </div>
 
-        {/* Action bar - visible when dates are selected */}
+        {/* Block/unblock action bar */}
         {selectedDates.size > 0 && (
           <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--color-sand-dark)' }}>
             <p className="text-sm mb-3 font-medium" style={{ color: 'var(--color-forest)' }}>
@@ -679,10 +574,10 @@ function BlockDatesCalendar({
           </div>
         )}
 
-        {/* Empty state hint when nothing selected */}
+        {/* Hint */}
         {selectedDates.size === 0 && (
           <p className="text-center text-xs mt-4" style={{ color: 'var(--color-forest-light)' }}>
-            Klicka pa datum ovan for att markera dem, sedan anvand knapparna for att blockera eller avblockera.
+            Klicka på lediga eller blockerade datum for att markera dem, sedan blockera eller avblockera.
           </p>
         )}
       </div>

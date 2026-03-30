@@ -23,6 +23,17 @@ export default function BookingPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const datesSelected = checkIn && checkOut;
+  const submitted = result?.success;
+
+  // Determine current step: 1=dates, 2=form, 3=awaiting, 4=pay, 5=done
+  const currentStep = submitted ? 3 : datesSelected ? 2 : 1;
+
+  const steps = [
+    { num: 1, label: 'Välj datum' },
+    { num: 2, label: 'Uppgifter' },
+    { num: 3, label: 'Godkännande' },
+    { num: 4, label: 'Betala' },
+  ];
 
   const fetchUnavailable = useCallback(async () => {
     try {
@@ -204,36 +215,37 @@ export default function BookingPage() {
       <main className="max-w-lg mx-auto px-6 pb-16">
 
         {/* Step indicator */}
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-              style={{
-                background: !datesSelected ? 'var(--color-copper)' : 'var(--color-forest)',
-                color: 'white',
-              }}
-            >
-              {datesSelected ? '✓' : '1'}
-            </div>
-            <span className="text-sm font-medium" style={{ color: !datesSelected ? 'var(--color-forest)' : 'var(--color-forest-light)' }}>
-              Välj datum
-            </span>
-          </div>
-          <div className="w-8 h-px" style={{ background: 'var(--color-sand-dark)' }} />
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
-              style={{
-                background: datesSelected ? 'var(--color-copper)' : 'var(--color-sand-dark)',
-                color: datesSelected ? 'white' : 'var(--color-sand)',
-              }}
-            >
-              2
-            </div>
-            <span className="text-sm font-medium" style={{ color: datesSelected ? 'var(--color-forest)' : 'var(--color-sand-dark)' }}>
-              Fyll i uppgifter
-            </span>
-          </div>
+        <div className="flex items-center justify-center mb-6 gap-1">
+          {steps.map((step, i) => {
+            const isCompleted = currentStep > step.num;
+            const isActive = currentStep === step.num;
+            const isFuture = currentStep < step.num;
+
+            return (
+              <div key={step.num} className="flex items-center">
+                <div className="flex flex-col items-center gap-1">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                    style={{
+                      background: isCompleted ? 'var(--color-forest)' : isActive ? 'var(--color-copper)' : 'var(--color-sand-dark)',
+                      color: isFuture ? 'var(--color-sand)' : 'white',
+                    }}
+                  >
+                    {isCompleted ? '✓' : step.num}
+                  </div>
+                  <span
+                    className="text-[10px] font-medium whitespace-nowrap"
+                    style={{ color: isFuture ? 'var(--color-sand-dark)' : isActive ? 'var(--color-forest)' : 'var(--color-forest-light)' }}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div className="w-6 h-px mx-1 mt-[-14px]" style={{ background: isCompleted ? 'var(--color-forest)' : 'var(--color-sand-dark)' }} />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Single unified card */}
@@ -419,28 +431,63 @@ export default function BookingPage() {
 
         {/* Result */}
         {result && (
-          <div
-            className="mt-6 rounded-2xl p-6"
-            style={{
-              background: result.success ? 'rgba(76,175,80,0.08)' : 'rgba(231,76,60,0.08)',
-              border: `1px solid ${result.success ? 'rgba(76,175,80,0.2)' : 'rgba(231,76,60,0.2)'}`,
-            }}
-          >
-            <p className="font-medium mb-2" style={{ color: result.success ? 'var(--color-green)' : 'var(--color-red)' }}>
-              {result.success ? 'Tack!' : 'Ojdå'}
-            </p>
-            <p className="text-sm" style={{ color: 'var(--color-forest)' }}>{result.message}</p>
-            {result.swishRef && (
-              <div className="mt-4 p-4 rounded-xl" style={{ background: 'var(--color-white)' }}>
-                <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--color-copper-dark)' }}>
-                  Swish-referens
-                </p>
-                <p className="text-2xl font-bold tracking-wider" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
-                  {result.swishRef}
-                </p>
-                <p className="text-xs mt-2" style={{ color: 'var(--color-forest-light)' }}>
-                  Ange denna referens vid Swish-betalning efter att bokningen godkänts.
-                </p>
+          <div className="mt-6 rounded-2xl overflow-hidden" style={{ background: 'var(--color-white)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            {result.success ? (
+              <>
+                {/* Success header */}
+                <div className="p-6 text-center" style={{ background: 'rgba(76,175,80,0.08)' }}>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: 'var(--color-forest)', color: 'white', fontSize: '20px' }}>
+                    ✓
+                  </div>
+                  <p className="font-medium text-lg mb-1" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
+                    Tack for din bokning!
+                  </p>
+                  <p className="text-sm" style={{ color: 'var(--color-forest-light)' }}>
+                    Din forfragan har skickats.
+                  </p>
+                </div>
+
+                {/* What happens next */}
+                <div className="p-6">
+                  <p className="text-xs uppercase tracking-wider mb-4 font-medium" style={{ color: 'var(--color-copper-dark)' }}>
+                    Vad händer nu?
+                  </p>
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ background: 'var(--color-copper)', color: 'white' }}>3</div>
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: 'var(--color-forest)' }}>Avvakta godkännande</p>
+                        <p className="text-xs" style={{ color: 'var(--color-forest-light)' }}>Vi granskar din forfragan och aterkommar via mejl.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ background: 'var(--color-sand-dark)', color: 'var(--color-sand)' }}>4</div>
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: 'var(--color-forest-light)' }}>Betala via Swish</p>
+                        <p className="text-xs" style={{ color: 'var(--color-forest-light)' }}>Vid godkännande far du Swish-uppgifter i mejlet.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {result.swishRef && (
+                    <div className="mt-5 p-4 rounded-xl" style={{ background: 'var(--color-sand)', border: '1px solid var(--color-sand-dark)' }}>
+                      <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--color-copper-dark)' }}>
+                        Din Swish-referens
+                      </p>
+                      <p className="text-2xl font-bold tracking-wider" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-forest)' }}>
+                        {result.swishRef}
+                      </p>
+                      <p className="text-xs mt-2" style={{ color: 'var(--color-forest-light)' }}>
+                        Spara denna. Du far den ocksa i bekraftelsemejlet.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="p-6">
+                <p className="font-medium mb-2" style={{ color: 'var(--color-red)' }}>Ojda</p>
+                <p className="text-sm" style={{ color: 'var(--color-forest)' }}>{result.message}</p>
               </div>
             )}
           </div>
