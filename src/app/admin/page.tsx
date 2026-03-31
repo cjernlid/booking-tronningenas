@@ -39,6 +39,20 @@ export default function AdminPage() {
     fetchData();
   };
 
+  const handleDelete = async (booking: Booking) => {
+    const confirmed = confirm(
+      `Vill du verkligen ta bort bokningen?\n\n` +
+      `Gäst: ${booking.guest_name}\n` +
+      `${formatDate(booking.check_in)} - ${formatDate(booking.check_out)}\n` +
+      `${booking.total_price.toLocaleString('sv-SE')} kr\n\n` +
+      `OBS: Denna åtgärd kan inte ångras. Bokningen raderas permanent.`
+    );
+    if (!confirmed) return;
+
+    await fetch(`/api/bookings/${booking.id}`, { method: 'DELETE' });
+    fetchData();
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (pin === (process.env.NEXT_PUBLIC_ADMIN_PIN || '1234')) {
@@ -250,6 +264,34 @@ export default function AdminPage() {
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(231,76,60,0.06)'; }}
                     >
                       <span style={{ fontSize: '16px' }}>&#10005;</span> Neka
+                    </button>
+                    <div style={{ width: '1px', background: 'var(--color-sand)' }} />
+                    <button
+                      onClick={() => handleDelete(booking)}
+                      className="py-3.5 px-4 text-sm font-bold transition-all flex items-center justify-center gap-2"
+                      style={{ background: 'rgba(231,76,60,0.06)', color: 'var(--color-red)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(231,76,60,0.15)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(231,76,60,0.06)'; }}
+                      title="Ta bort bokning"
+                    >
+                      <span style={{ fontSize: '14px' }}>&#128465;</span>
+                    </button>
+                  </div>
+                )}
+
+                {booking.status !== 'pending' && (
+                  <div
+                    className="flex border-t"
+                    style={{ borderColor: 'var(--color-sand)' }}
+                  >
+                    <button
+                      onClick={() => handleDelete(booking)}
+                      className="w-full py-3 text-sm font-medium transition-all flex items-center justify-center gap-2"
+                      style={{ background: 'rgba(231,76,60,0.04)', color: 'var(--color-red)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(231,76,60,0.12)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(231,76,60,0.04)'; }}
+                    >
+                      <span style={{ fontSize: '14px' }}>&#128465;</span> Ta bort bokning
                     </button>
                   </div>
                 )}
