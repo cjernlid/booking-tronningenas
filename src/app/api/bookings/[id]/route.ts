@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceClient } from '@/lib/supabase';
+import { getDb } from '@/lib/db';
 import { sendApprovalEmail, sendDenialEmail } from '@/lib/email';
 
 export async function PATCH(
@@ -7,7 +7,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = getServiceClient();
+  const sql = getDb();
   const body = await req.json();
   const { status } = body;
 
@@ -15,16 +15,17 @@ export async function PATCH(
     return NextResponse.json({ error: 'Status måste vara approved eller denied' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({ status })
-    .eq('id', id)
-    .select()
-    .single();
+  try {
+    const result = await sql`
+      UPDATE bookings SET status = ${status} WHERE id = ${id} RETURNING *
+    `;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (result.length === 0) {
+      return NextResponse.json({ error: 'Bokning hittades inte' }, { status: 404 });
+    }
 
-  if (data) {
+    const data = result[0];
+
     if (status === 'approved') {
       sendApprovalEmail({
         guestName: data.guest_name,
@@ -43,9 +44,12 @@ export async function PATCH(
         checkOut: data.check_out,
       }).catch(console.error);
     }
-  }
 
-  return NextResponse.json(data);
+    return NextResponse.json(data);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -53,14 +57,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = getServiceClient();
+  const sql = getDb();
 
-  const { error } = await supabase
-    .from('bookings')
-    .delete()
-    .eq('id', id);
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({ success: true });
+  try {
+    await sql`DELETE FROM bookings WHERE id = ${id}`;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
